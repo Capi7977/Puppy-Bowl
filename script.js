@@ -1,6 +1,6 @@
 // Use the API_URL variable to make fetch requests to the API.
 // Replace the placeholder with your cohort name (ex: 2109-UNF-HY-WEB-PT)
-const cohortName = "YOUR COHORT NAME HERE";
+const cohortName = "2410-FTB-ET-WEB-AM";
 const API_URL = `https://fsa-puppy-bowl.herokuapp.com/api/${cohortName}`;
 
 /**
@@ -10,6 +10,9 @@ const API_URL = `https://fsa-puppy-bowl.herokuapp.com/api/${cohortName}`;
 const fetchAllPlayers = async () => {
   try {
     // TODO
+    const res = await fetch(`${API_URL}/players`)
+    const json = await res.json();
+    console.log(json)
   } catch (err) {
     console.error("Uh oh, trouble fetching players!", err);
   }
@@ -23,6 +26,9 @@ const fetchAllPlayers = async () => {
 const fetchSinglePlayer = async (playerId) => {
   try {
     // TODO
+     const res = await fetch (`${API_URL}/players/${playerId}`);
+     const json = await res.json();
+     return json.data.player;
   } catch (err) {
     console.error(`Oh no, trouble fetching player #${playerId}!`, err);
   }
@@ -36,6 +42,13 @@ const fetchSinglePlayer = async (playerId) => {
 const addNewPlayer = async (playerObj) => {
   try {
     // TODO
+    const res = await fetch(`${API_URL}/players/`, {
+      method: "POST",
+      body: json.stringify(playerObj),
+      headers: {"Content-type": "applcaiton.json"}
+    })
+    const json = await res.json();
+    return json;
   } catch (err) {
     console.error("Oops, something went wrong with adding that player!", err);
   }
@@ -48,6 +61,9 @@ const addNewPlayer = async (playerObj) => {
 const removePlayer = async (playerId) => {
   try {
     // TODO
+    const res = await fetch(`${API_URL}/players/${playerId}`, {
+      method: "Delete",
+    });
   } catch (err) {
     console.error(
       `Whoops, trouble removing player #${playerId} from the roster!`,
@@ -77,6 +93,33 @@ const removePlayer = async (playerId) => {
  */
 const renderAllPlayers = (playerList) => {
   // TODO
+  try {
+    const playerCards = playerList.map((player) => {
+      const playerCard = document.createElement("div");
+      const playerImg = document.createElement("img");
+      const playerName = document.createElement("p");
+      const detailsButton = document.createElement("button");
+      playerCard.classList.add("player-card-container");
+      playerImg.src = player.imageUrl;
+      playerImg.alt = player.name;
+      playerName.innerText = player.name;
+      detailsButton.innerText = "See Details";
+      detailsButton.addEventListener("click", async function () {
+        const playerData = await fetchSinglePlayer(player.id);
+        console.log(playerData);
+        renderSinglePlayer(playerData);
+      });
+      playerCard.appendChild(playerImg);
+      playerCard.appendChild(playerName);
+      playerCard.appendChild(detailsButton);
+
+      return playerCard;
+    });
+
+    playersContainer.replaceChildren(...playerCards);
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 /**
@@ -94,7 +137,39 @@ const renderAllPlayers = (playerList) => {
  */
 const renderSinglePlayer = (player) => {
   // TODO
+  try {
+    const playerName = document.createElement("h3");
+    const playerBreed = document.createElement("p");
+    const playerStatus = document.createElement("p");
+    const playerImg = document.createElement("img");
+    const deleteButton = document.createElement("button");
+    playerName.innerText = player.name;
+    playerBreed.innerText = player.breed;
+    playerStatus.innerText = player.status;
+    playerImg.height = 300;
+    playerImg.src = player.imageUrl;
+    deleteButton.innerText = "Remove from Roster";
+    deleteButton.addEventListener("click", async (e) => {
+      modal.classList.remove("modal-open");
+      modalContent.classList.remove("modal-content-open");
+      await removePlayer(player.id);
+      const players = await fetchAllPlayers();
+      renderAllPlayers(players);
+    });
+    modalContent.replaceChildren(
+      playerName,
+      playerImg,
+      playerBreed,
+      playerStatus,
+      deleteButton
+    );
+    modal.classList.add("modal-open");
+    modalContent.classList.add("modal-content-open");
+  } catch (err) {
+    console.log(err);
+  }
 };
+
 
 /**
  * Fills in `<form id="new-player-form">` with the appropriate inputs and a submit button.
@@ -103,19 +178,78 @@ const renderSinglePlayer = (player) => {
  */
 const renderNewPlayerForm = () => {
   try {
-    // TODO
-  } catch (err) {
-    console.error("Uh oh, trouble rendering the new player form!", err);
-  }
-};
+    // TOdo
+      const nameInput = document.createElement("input");
+      const nameLabel = document.createElement("label");
+      const breedInput = document.createElement("input");
+      const breedLabel = document.createElement("label");
+      const imgInput = document.createElement("input");
+      const imgLabel = document.createElement("label");
+      const status = document.createElement("select");
+      const benchOption = document.createElement("option");
+      const fieldOption = document.createElement("option");
+      nameInput.setAttribute("id", "playername");
+      nameLabel.innerText = "Name";
+      nameLabel.setAttribute("for", "playername");
+      breedInput.setAttribute("id", "breed");
+      breedLabel.setAttribute("for", "breed");
+      breedLabel.innerText = "Breed";
+      imgInput.setAttribute("id", "img");
+      imgLabel.setAttribute("for", "img");
+      imgLabel.innerText = "Image";
+      benchOption.value = "bench";
+      benchOption.innerText = "Bench";
+      benchOption.setAttribute("selected", "");
+      fieldOption.value = "field";
+      fieldOption.innerText = "Field";
+      status.setAttribute("id", "playerstatus");
+      status.appendChild(benchOption);
+      status.appendChild(fieldOption);
+      const submitBtn = document.createElement("button");
+      submitBtn.innerText = "Submit";
+  
+      addNewPlayerForm.replaceChildren(
+        nameLabel,
+        nameInput,
+        breedLabel,
+        breedInput,
+        status,
+        imgLabel,
+        imgInput,
+        submitBtn
+      );
 
+      addNewPlayerForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const newPlayer = {
+          name: playername.value,
+          breed: breed.value,
+          imageUrl: imgInput.value,
+          status: playerStatus.value,
+        };
+  
+        const result = await addNewPlayer(newPlayer);
+        if (result.success) {
+          alert("player added successfully!");
+          playername.value = "";
+          breed.value = "";
+          img.value = "";
+          const players = await fetchAllPlayers();
+          renderAllPlayers(players);
+        } else if (result.error) {
+          console.log("Error creating player");
+        }
+      });
+    } catch (err) {
+      console.error("Uh oh, trouble rendering the new player form!", err);
+    }
+  };
 /**
  * Initializes the app by fetching all players and rendering them to the DOM.
  */
 const init = async () => {
   const players = await fetchAllPlayers();
   renderAllPlayers(players);
-
   renderNewPlayerForm();
 };
 
